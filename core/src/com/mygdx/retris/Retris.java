@@ -90,7 +90,7 @@ public class Retris extends ApplicationAdapter implements ApplicationListener {
 		font.draw(batch, "Next",(Gdx.graphics.getWidth()/2)+160,265);
 		font.getData().setScale(1);
 		font.setColor(Color.WHITE);
-		font.draw(batch, "  L/R: Move\n\n  U/D: Rotate\n\nSPACE: Down\n\nENTER: RESTART",(Gdx.graphics.getWidth()/2)+110,500);
+		font.draw(batch, "  L/R: Move\n\n  U/D: Rotate\n\nSPACE: Down\n\nENTER: RESTART\n\nRSHIFT: SWAP",(Gdx.graphics.getWidth()/2)+110,500);
 		if(!game.getState()){
 			font.setColor(Color.WHITE);
 			font.getData().setScale(2);
@@ -129,6 +129,9 @@ public class Retris extends ApplicationAdapter implements ApplicationListener {
 			game.dropDown();
 			game.setScore(1);
 			camera.update();
+		}
+		if(Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_RIGHT)) {
+			game.swap();
 		}
 		if(Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
 			game.init(border,middle,locked,active,waterBorder,waterFill);

@@ -156,6 +156,15 @@ public class tetris {
         }
 
     }
+    public void swap(){
+        int temp=0;
+        temp = nextPiece;
+        nextPiece = currentPiece;
+        currentPiece = temp;
+        paintBoard();
+
+
+    }
 
     // Collision test
     private boolean collidesAt(int x, int y, int rotation) {
@@ -270,7 +279,14 @@ public class tetris {
         }
     }
     private void drawNextPiece() {
+        for (int i = 0; i <24 ; i++) {
+            for (int j = 0; j <24 ; j++) {
+                if (board[i][j] == active && i>11 && j<8) {
+                    board[i][j] = middle;
+                }
+            }
 
+        }
         for (Point p : Tetrominoes[nextPiece][2]) {
             board[p.x+14][p.y+2] = active;
         }
@@ -289,6 +305,7 @@ public class tetris {
 
         }
         // Draw the currently falling piece
+        drawNextPiece();
         drawPiece();
 
     }
