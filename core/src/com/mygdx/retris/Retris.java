@@ -1,6 +1,7 @@
 package com.mygdx.retris;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -21,6 +22,7 @@ public class Retris extends ApplicationAdapter implements ApplicationListener {
 	boolean gamestate;
 	Texture border,middle,locked,active;
 	Texture waterBorder,waterFill;
+	Music track;
 	//Texture locked;
 	//Texture active;
 	tetris game = new tetris();
@@ -42,6 +44,11 @@ public class Retris extends ApplicationAdapter implements ApplicationListener {
 
 		waterBorder = new Texture(Gdx.files.internal("water_full_2.png"));
 		waterFill = new Texture(Gdx.files.internal("water_full_2_transp.png"));
+
+		track = Gdx.audio.newMusic(Gdx.files.internal("Track1.mp3"));
+		track.setLooping(true);
+		track.play();
+		track.setVolume((float)0.3);
 
 		font = new BitmapFont(Gdx.files.internal("vcr_osd_mono.fnt"), Gdx.files.internal("vcr_osd_mono.png"), true); //must be set true to be flipped
 
@@ -87,7 +94,7 @@ public class Retris extends ApplicationAdapter implements ApplicationListener {
 		if(!game.getState()){
 			font.setColor(Color.WHITE);
 			font.getData().setScale(2);
-			font.getData().
+
 			Score = "Score: "+game.getScore();
 			font.draw(batch, gameover, (Gdx.graphics.getWidth()/2)-290, 400);
 			font.getData().setScale(1);
@@ -127,7 +134,7 @@ public class Retris extends ApplicationAdapter implements ApplicationListener {
 			game.init(border,middle,locked,active,waterBorder,waterFill);
 		}
 		if(game.getState()){
-			if(timer>1 ) {
+			if(timer>0.98 ) {
 				timer = 0;
 				game.dropDown();
 			}else{
