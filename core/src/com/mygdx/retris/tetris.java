@@ -16,7 +16,7 @@ import javax.swing.JPanel;
 
 public class tetris {
 
-    private final Point[][][] Tetraminos = {
+    private final Point[][][] Tetrominoes = {
             // I-Piece
             {
                     { new Point(0, 1), new Point(1, 1), new Point(2, 1), new Point(3, 1) },
@@ -75,85 +75,125 @@ public class tetris {
     };
 
 
-    private Point pieceOrigin;
+    private Point pieceStart;
     private int currentPiece;
+    private int nextPiece;
     private int rotation;
     private ArrayList<Integer> nextPieces = new ArrayList<Integer>();
-
+    private boolean state;
+    int temp;
     private long score;
-    private Texture[][] well;
-    Texture border,middle,locked,active;
+    private Texture[][] board;
+    Texture border,middle,locked,active, waterB, waterF;
 
 
-    // Creates a border around the well and initializes the dropping piece
-    public void init(Texture nborder,Texture nmiddle,Texture nlocked,Texture nactive) {
+    // Creates a border and middle out of textures then puts a new active piece on the board
+    public void init(Texture nborder,Texture nmiddle,Texture nlocked,Texture nactive,Texture wBorder, Texture wFill) {
         border = nborder;
         middle = nmiddle;
         locked = nlocked;
         active = nactive;
-        well = new Texture[12][24];
-        for (int i = 0; i < 12; i++) {
-            for (int j = 0; j < 23; j++) {
-                if (i == 0 || i == 11 || j == 22) {
-                    well[i][j] =border;
-                } else {
-                    well[i][j] = middle;
+        waterB = wBorder;
+        waterF = wFill;
+        state = true;
+        score = 0;
+        board = new Texture[24][24];
+        Collections.addAll(nextPieces, 0, 1, 2, 3, 4, 5, 6);
+        Collections.shuffle(nextPieces);
+        for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < 24; j++) {
+                if(i<12 && j<23) {
+                    if (i == 0 || i == 11 || j == 22) {
+                        board[i][j] = border;
+                    } else {
+                        board[i][j] = middle;
+                    }
+                }else {
+                    if((i==12 || i==18 || j==0 || j==6 || j==7)&&j<8 ){
+                        board[i][j] = border;
+                    }else{
+                        if (j<8) {
+                            board[i][j] = middle;
+                        }else{
+                            board[i][j] = locked;
+                        }
+                    }
                 }
             }
         }
-        newPiece();
+        newActive();
     }
 
-    // Put a new, random piece into the dropping position
-    public void newPiece() {
-        pieceOrigin = new Point(5, 0);
+    // Create a new active piece
+    public void newActive() {
+
+        pieceStart = new Point(5, 0);
         rotation = 0;
-        if (nextPieces.isEmpty()) {
+        temp = nextPieces.get(0);
+        if(nextPieces.size()<=1){
+            temp = nextPiece;
+            Collections.addAll(nextPieces, 0, 1, 2, 3, 4, 5, 6);
+            Collections.shuffle(nextPieces);
+
+        }
+        nextPiece = nextPieces.get(1);
+        currentPiece = temp;
+        nextPieces.remove(0);
+
+        /*if (nextPieces.isEmpty()) {
             Collections.addAll(nextPieces, 0, 1, 2, 3, 4, 5, 6);
             Collections.shuffle(nextPieces);
         }
         currentPiece = nextPieces.get(0);
-        nextPieces.remove(0);
-        drawPiece();
+        nextPiece = nextPieces.get(1);
+        nextPieces.remove(0);*/
+        if(!collidesAt(pieceStart.x, pieceStart.y , rotation)){
+
+            drawPiece();
+            drawNextPiece();
+        }else{
+            gameOver();
+        }
+
     }
 
-    // Collision test for the dropping piece
+    // Collision test
     private boolean collidesAt(int x, int y, int rotation) {
-        for (Point p : Tetraminos[currentPiece][rotation]) {
-            if (well[p.x + x][p.y + y] != middle && (well[p.x + x][p.y + y] != active) ){
+        for (Point p : Tetrominoes[currentPiece][rotation]) {
+            if (board[p.x + x][p.y + y] != middle && (board[p.x + x][p.y + y] != active) ){
                 return true;
             }
         }
         return false;
     }
 
-    // Rotate the piece clockwise or counterclockwise
+    //Rotate the active piece
     public void rotate(int i) {
-        int newRotation = (rotation + i) % 4;
-        if (newRotation < 0) {
-            newRotation = 3;
+        int nRotation = (rotation + i) % 4;
+        if (nRotation < 0) {
+            nRotation = 3;
         }
-        if (!collidesAt(pieceOrigin.x, pieceOrigin.y, newRotation)) {
-            rotation = newRotation;
+        if (!collidesAt(pieceStart.x, pieceStart.y, nRotation)) {
+            rotation = nRotation;
         }
         paintBoard();
     }
 
     // Move the piece left or right
     public void move(int i) {
-        if (!collidesAt(pieceOrigin.x + i, pieceOrigin.y, rotation)) {
-            pieceOrigin.x += i;
+        if (!collidesAt(pieceStart.x + i, pieceStart.y, rotation)) {
+            pieceStart.x += i;
         }
 
     }
 
-    // Drops the piece one line or fixes it to the well if it can't drop
+    // Moves piece one down or adds it to pile
     public void dropDown() {
-        if (!collidesAt(pieceOrigin.x, pieceOrigin.y + 1, rotation)) {
-            pieceOrigin.y += 1;
+        if (!collidesAt(pieceStart.x, pieceStart.y + 1, rotation)) {
+            pieceStart.y += 1;
             paintBoard();
         } else {
-            fixToWell();
+            lockPiece();
         }
 
 
@@ -161,18 +201,26 @@ public class tetris {
 
     // Make the dropping piece part of the well, so it is available for
     // collision detection.
-    public void fixToWell() {
-        for (Point p : Tetraminos[currentPiece][rotation]) {
-            well[pieceOrigin.x + p.x][pieceOrigin.y + p.y] = locked;
+    public void lockPiece() {
+        for (Point p : Tetrominoes[currentPiece][rotation]) {
+            board[pieceStart.x + p.x][pieceStart.y + p.y] = locked;
+        }
+        for (int i = 0; i <24 ; i++) {
+            for (int j = 0; j <24 ; j++) {
+                if (board[i][j] == active && i>11 && j<8) {
+                    board[i][j] = middle;
+                }
+            }
+
         }
         clearRows();
-        newPiece();
+        newActive();
     }
 
     public void deleteRow(int row) {
         for (int j = row-1; j > 0; j--) {
             for (int i = 1; i < 11; i++) {
-                well[i][j+1] = well[i][j];
+                board[i][j+1] = board[i][j];
             }
         }
     }
@@ -186,7 +234,7 @@ public class tetris {
         for (int j = 21; j > 0; j--) {
             gap = false;
             for (int i = 1; i < 11; i++) {
-                if (well[i][j] == middle) {
+                if (board[i][j] == middle) {
                     gap = true;
                     break;
                 }
@@ -217,92 +265,63 @@ public class tetris {
     // Draw the falling piece
     private void drawPiece() {
 
-        for (Point p : Tetraminos[currentPiece][rotation]) {
-            well[p.x+pieceOrigin.x][p.y+pieceOrigin.y] = active;
+        for (Point p : Tetrominoes[currentPiece][rotation]) {
+            board[p.x+pieceStart.x][p.y+pieceStart.y] = active;
+        }
+    }
+    private void drawNextPiece() {
+
+        for (Point p : Tetrominoes[nextPiece][2]) {
+            board[p.x+14][p.y+2] = active;
         }
     }
 
     //@Override
     public void paintBoard()
     {
-        // Paint the well
-
-        for (int i = 0; i < 12; i++) {
-            for (int j = 0; j < 23; j++) {
-                if (well[i][j] == active){
-                    well[i][j] = middle;
+        for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < 24; j++) {
+                if(i<12){
+                if (board[i][j] == active){
+                    board[i][j] = middle;
                 }
-            }
+            }}
+
         }
         // Draw the currently falling piece
         drawPiece();
 
-        // Display the score
-        //g.setColor(Color.WHITE);
-        //g.drawString("" + score, 19*12, 25);
-
-
     }
 
-    public Texture[][] getWell() {
-        return well;
+    public Texture[][] getBoard() {
+        return board;
     }
 
     public void setScore(long score) {
         this.score += score;
     }
+    public boolean getState(){
+        return state;
+    }
+    public long getScore(){
+        return score;
+    }
 
-    /* public static void main(String[] args) {
-        JFrame f = new JFrame("Tetris");
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setSize(12*26+10, 26*23+25);
-        f.setVisible(true);
-
-        final Tetris game = new Tetris();
-        game.init();
-        f.add(game);
-
-        // Keyboard controls
-        f.addKeyListener(new KeyListener() {
-            public void keyTyped(KeyEvent e) {
-            }
-
-            public void keyPressed(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_UP:
-                        game.rotate(-1);
-                        break;
-                    case KeyEvent.VK_DOWN:
-                        game.rotate(+1);
-                        break;
-                    case KeyEvent.VK_LEFT:
-                        game.move(-1);
-                        break;
-                    case KeyEvent.VK_RIGHT:
-                        game.move(+1);
-                        break;
-                    case KeyEvent.VK_SPACE:
-                        game.dropDown();
-                        game.score += 1;
-                        break;
+    public void gameOver(){
+        state = false;
+        for (int i = 0; i < 12; i++) {
+            for (int j = 0; j < 23; j++) {
+                if (i == 0 || i == 11 || j == 22) {
+                    board[i][j] =border;
+                } else{
+                    board[i][j] = middle;
                 }
             }
 
-            public void keyReleased(KeyEvent e) {
-            }
-        });
+        }
 
-        // Make the falling piece drop every second
-        new Thread() {
-            @Override public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(1000);
-                        game.dropDown();
-                    } catch ( InterruptedException e ) {}
-                }
-            }
-        }.start();
-    }*/
+    }
+
+
 }
 
